@@ -1,20 +1,49 @@
-body {
-    padding-left: 15px;
-    }
 
-    h1{
-    font-weight: bold;
-    text-decoration-line: underline;
-    }
-
-    h4{
-    font-weight: bold;
-    }
-
-    p{
+p{
     padding-top: 5px;
     }
 
     .toIndent{
         padding-left: 5px;
+    }
+
+    body {
+        padding-left: 15px;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+    }
+    .container {
+        width: 80%;
+        margin: auto;
+        overflow: hidden;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+        color: #333;
+        font-weight: bold;
+    text-decoration-line: underline;
+    }
+    h4 {
+        color: #555;
+        font-weight: bold;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+    ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    li {
+        margin: 10px 0;
+    }
+    .section {
+        margin-bottom: 20px;
+    }
+    .skills, .work-experience, .projects {
+        margin-bottom: 30px;
     }
