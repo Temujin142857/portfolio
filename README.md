@@ -1,2 +1,2 @@
 Made for assignment 2 of class csi 3153
-[Design System](yatzee_game/docs/design_system.md)
+[Design System](Projects/yatzee_game/docs/design_system.md)
