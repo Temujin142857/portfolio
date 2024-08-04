@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Yahtzee</title>
+    <link rel="stylesheet" href="indexStyles.css">
+</head>
+
+<body>
+
+<h1>Yahtzee</h1>
+<h4 style="margin-bottom: 0">Instructions:</h4>
+<p style="margin-bottom: 30px">Click the button to roll the dice, click on a die to keep it, you can reroll up to three times.
+    <br> Once you're finished rolling click on a row to choose where to put your points!</p>
+    <div>
+        <label for="player-name">Enter your name: </label>
+        <input type="text" id="player-name" placeholder="Your Name">
+        <button onclick="savePlayerName()" style="cursor: pointer; padding: 5px">Save Name</button>
+    </div>
+<div id="game-container" style="display: flex">
+    <div id="score-container">
+        <table class="card" id="score-card">
+            <thead>
+            <tr>
+                <th>Category</th>
+                <th>Score</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <div class="score" id="game-score">Total Score: 0</div>
+    </div>
+    <div>
+        <div id="dice-mat" style="display: flex">
+            <p class="dice" id="die-1" onclick="toggleKeepDie(0)"></p>
+            <p class="dice" id="die-2" onclick="toggleKeepDie(1)"></p>
+            <p class="dice" id="die-3" onclick="toggleKeepDie(2)"></p>
+            <p class="dice" id="die-4" onclick="toggleKeepDie(3)"></p>
+            <p class="dice" id="die-5" onclick="toggleKeepDie(4)"></p>
+        </div>
+        <div style="margin-bottom: 40px">
+            <button onclick="rollDice()" style="cursor: pointer; margin-left: 115px; padding: 5px">roll</button>
+        </div>
+        <p id="remaining-rolls" style="margin-left: 30px; font-size: 22px">Remaining Rolls: 3</p>
+    </div>
+</div>
+<button onclick="fullReset()" style="cursor: pointer; padding: 5px">Reset and Save</button>
+
+<div id="leaderboard-container">
+    <h2>Leaderboard</h2>
+    <table id="leaderboard">
+        <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Player Name</th>
+            <th>Highest Score</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Leaderboard data will be inserted here dynamically -->
+        </tbody>
+    </table>
+    <div id="pagination">
+        <button id="prev" onclick="prevPage()">Previous</button>
+        <span id="page-number">Page 1</span>
+        <button id="next" onclick="nextPage()">Next</button>
+    </div>
+    <div id="no-data" style="display: none;">
+        No data available.
+    </div>
+</div>
+
+<script>
+    let game;
+    let playerName = "";
+    const scoreCardDisplay = document.getElementById('score-card').getElementsByTagName('tbody')[0];
+    const dice = [document.getElementById("die-1"), document.getElementById("die-2"), document.getElementById("die-3"), document.getElementById("die-4"), document.getElementById("die-5")];
+    const scoreElement = document.getElementById("game-score");
+    const remainingElement = document.getElementById("remaining-rolls");
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        initialiseGame();
+        fetchLeaderboard();
+    });
+
+    function savePlayerName() {
+        const nameInput = document.getElementById("player-name").value;
+        if (nameInput) {
+            playerName = nameInput;
+            console.log("Player name saved:", playerName);
+            initialiseGame();
+        } else {
+            alert("Please enter your name.");
+        }
+    }
+
+    function initialiseGame() {
+        fetch('start_game.php')
+            .then(response => response.json())
+            .then(data => {
+                game = data;
+                updateDisplay();
+            })
+            .catch(error => console.error('Error initializing game:', error));
+    }
+
+    function toggleKeepDie(num) {
+        game.diceKeep[num] = !game.diceKeep[num];
+        toggleDiceKeep(num);
+        updateDisplay();
+    }
+
+    function toggleDiceKeep(index) {
+            fetch(`toggle_dice_keep.php?index=${index}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    game = data;
+                    updateDisplay();
+                })
+                .catch(error => console.error('Error toggling dice keep:', error));
+        }
+
+    function rollDice() {
+        fetch('roll_dice.php', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {game = data;
+                console.log(data)
+                updateDisplay();
+            })
+            .catch(error => console.error('Error rolling dice:', error));
+    }
+
+  
+   
+
+    function updateServerState() {
+        fetch('update_gamestate.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(game)
+        })
+            .then(response => response.json())
+            .then(data => {
+                game = data;
+                updateDisplay();
+            })
+            .catch(error => console.error('Error updating game state:', error));
+    }
+
+    function updateDisplay() {
+        console.log("updated", game.scores)
+        scoreElement.textContent = `Total Score: ${game.total_score}`;
+        remainingElement.textContent = `Remaining Rolls: ${3 - game.rolls}`;
+
+        for (let i = 0; i < game.dice.length; i++) {
+            dice[i].textContent = game.dice[i] !== 0 ? game.dice[i] : '';
+            dice[i].style.border = game.diceKeep[i] ? '2px solid green' : 'none';
+        }
+
+        for (const category in game.scores) {
+            // Check if a row for this category already exists
+            let existingRow = scoreCardDisplay.querySelector(`tr[data-category="${category}"]`);
+
+            if (existingRow) {
+                // Update the existing row
+                existingRow.cells[1].textContent = game.scores[category] !== null ? game.scores[category] : '';
+            } else {
+                // Create a new row for this category
+                let newRow = document.createElement('tr');
+                newRow.setAttribute('data-category', category);
+
+                // Create cells for score and category
+                let scoreCell = document.createElement('td');
+                let categoryCell = document.createElement('td');
+
+                // Set the cell contents
+                scoreCell.textContent = category;
+                categoryCell.textContent = game.scores[category] !== null ? game.scores[category] : '';
+
+                // Append cells to the row
+                newRow.appendChild(scoreCell);
+                newRow.appendChild(categoryCell);
+                newRow.classList.add('table-row');
+
+                // Append the new row to the table
+                scoreCardDisplay.appendChild(newRow);
+                newRow.onclick = function() {
+                    saveRow(category);
+                };
+            }
+        }
+    }
+
+ 
+
+    function saveRow(category) {
+    fetch(`calculate_score.php?category=${category}`, {
+        method: 'POST'
+    })
+    .then(response => {
+        return response.json();
+    })
+    .then(data => {
+        game = data;
+        console.log('API row saving response:', data);   
+        updateDisplay();
+    })
+    .catch(error => {
+        if (error.message.includes('Unexpected token')) {
+            // Suppress this specific error
+            console.warn('Suppressed error:', error.message);
+        } else {
+            console.error('Error calculating the score:', error);
+        }
+    });
+}
+
+    
+
+    function fullReset() {
+        addToLeaderboard(playerName, game.total_score);
+        initialiseGame();
+    }
+
+    // Leaderboard functions
+
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let leaderboardData = [];
+
+    function fetchLeaderboard() {
+        fetch('get_leaderboard.php')
+            .then(response => {
+                console.log('Response:', response); // Debug line to log the response object
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data:', data);
+                leaderboardData = data;
+                console.log(leaderboardData)
+                renderLeaderboard();
+            })
+            .catch(error => console.error('Error fetching leaderboard:', error));
+    }
+
+    function addToLeaderboard(player, score) {
+        fetch('update_leaderboard.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ player: player, score: score })
+        })
+            .then(response => response.json())
+            .then(data => {
+                leaderboardData=data;
+                console.log(leaderboardData)
+                renderLeaderboard(); // Function to update your leaderboard display
+            })
+            .catch(error => {
+                console.error('Error adding to leaderboard:', error);
+            });
+    }
+
+    function renderLeaderboard() {
+        const leaderboardBody = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+        leaderboardBody.innerHTML = '';
+
+        // Convert the leaderboard object into an array of [name, score] pairs and sort by score
+        const leaderboardArray = Object.entries(leaderboardData)
+            .sort(([, scoreA], [, scoreB]) => scoreB - scoreA); // Sort in descending order
+
+        // Paginate the data
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const paginatedData = leaderboardArray.slice(start, end);
+
+        paginatedData.forEach(([name, score], index) => {
+            const row = document.createElement('tr');
+
+            const rankCell = document.createElement('td');
+            rankCell.textContent = start + index + 1;
+            row.appendChild(rankCell);
+
+            const nameCell = document.createElement('td');
+            nameCell.textContent = name;
+            row.appendChild(nameCell);
+
+            const scoreCell = document.createElement('td');
+            scoreCell.textContent = score;
+            row.appendChild(scoreCell);
+
+            leaderboardBody.appendChild(row);
+        });
+
+        document.getElementById('page-number').textContent = `Page ${currentPage}`;
+        document.getElementById('prev').disabled = currentPage === 1;
+        document.getElementById('next').disabled = end >= leaderboardArray.length;
+    }
+    function nextPage() {
+        currentPage++;
+        renderLeaderboard();
+    }
+
+    function prevPage() {
+        currentPage--;
+        renderLeaderboard();
+    }
+</script>
+
+</body>
+</html>
